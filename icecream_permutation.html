@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アイスやさん - 場合の数</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; background: #fff8f9; }
+#app { padding: 1rem; max-width: 680px; margin: 0 auto; }
+.shop-header { text-align: center; padding: 1rem 0 0.3rem; font-size: 22px; font-weight: bold; color: #c0396a; }
+.shop-sub { text-align: center; font-size: 14px; color: #888; margin-bottom: 1rem; }
+
+.mode-select-area { background: #fce4ec; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
+.mode-select-area p { font-size: 14px; font-weight: bold; color: #555; margin-bottom: 0.6rem; }
+.mode-btns { display: flex; gap: 10px; justify-content: center; }
+.mode-btn { padding: 10px 28px; border-radius: 8px; border: 2px solid #D4537E; background: #fff; color: #D4537E; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.15s; }
+.mode-btn.active { background: #D4537E; color: white; }
+
+.character-box { background: #fff; border: 1px solid #f0c0d0; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 12px; }
+.character-face { font-size: 32px; flex-shrink: 0; }
+.character-speech { font-size: 15px; color: #333; line-height: 1.7; }
+
+.main-area { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+
+.flavor-panel { background: #fff3f6; border-radius: 12px; padding: 1rem; }
+.flavor-panel h3 { font-size: 14px; font-weight: bold; color: #c0396a; margin-bottom: 0.75rem; }
+.flavor-btn { display: block; width: 100%; margin-bottom: 8px; padding: 10px 12px; border-radius: 8px; border: 2px solid #ddd; cursor: pointer; font-size: 15px; font-weight: bold; text-align: left; transition: all 0.15s; }
+.flavor-btn:hover:not(:disabled) { filter: brightness(0.95); }
+.flavor-btn:disabled { opacity: 0.35; cursor: default; }
+
+.cone-panel { background: #fff3f6; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; align-items: center; }
+.cone-panel h3 { font-size: 14px; font-weight: bold; color: #c0396a; margin-bottom: 0.5rem; align-self: flex-start; }
+
+.action-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+.btn-primary { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #D4537E; color: white; font-size: 15px; font-weight: bold; cursor: pointer; }
+.btn-primary:disabled { opacity: 0.4; cursor: default; }
+.btn-secondary { padding: 12px 16px; border-radius: 8px; border: 2px solid #ccc; background: #fff; color: #555; font-size: 15px; cursor: pointer; }
+
+.table-section { background: #fff3f6; border-radius: 12px; padding: 1rem; }
+.table-section h3 { font-size: 15px; font-weight: bold; color: #c0396a; margin-bottom: 0.75rem; }
+.progress-bar-wrap { background: #f0d0da; border-radius: 999px; height: 10px; margin-bottom: 0.75rem; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 999px; background: #D4537E; transition: width 0.4s; }
+.counter-badge { display: inline-block; background: #fce4ec; color: #993556; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: bold; margin-left: 8px; }
+
+.combo-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.combo-table th { text-align: left; padding: 6px 8px; color: #888; border-bottom: 1px solid #f0c0d0; font-weight: bold; }
+.combo-table td { padding: 6px 8px; border-bottom: 1px solid #f5e0e8; color: #333; }
+.combo-table tr:last-child td { border-bottom: none; }
+.new-row { background: #fce4ec; }
+
+.complete-banner { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1rem; }
+.complete-banner .big { font-size: 40px; }
+.complete-banner p { font-size: 17px; font-weight: bold; color: #2e7d32; margin-top: 8px; }
+.complete-banner small { font-size: 14px; color: #388e3c; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="shop-header">🍦 アイスやさん</div>
+  <div class="shop-sub">5つのフレーバーから順番に選んで、コーンに乗せよう！</div>
+
+  <div class="mode-select-area">
+    <p>何だんにする？</p>
+    <div class="mode-btns">
+      <button class="mode-btn" id="mode2btn" onclick="setMode(2)">2だん</button>
+      <button class="mode-btn active" id="mode3btn" onclick="setMode(3)">3だん</button>
+    </div>
+  </div>
+
+  <div class="character-box">
+    <div class="character-face">🐨</div>
+    <div class="character-speech" id="speech">こんにちは！わたしはコアラのアイスちゃんです。<br>フレーバーを下から順番に選んでね！</div>
+  </div>
+
+  <div class="main-area">
+    <div class="flavor-panel">
+      <h3>フレーバーを選ぼう</h3>
+      <div id="flavor-buttons"></div>
+    </div>
+    <div class="cone-panel">
+      <h3>コーン</h3>
+      <svg id="coneSvg" width="160" height="230" viewBox="0 0 160 230" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn-primary" id="confirmBtn" disabled onclick="confirmSelection()">このアイスに決める！</button>
+    <button class="btn-secondary" onclick="resetSelection()">やり直す</button>
+  </div>
+
+  <div class="table-section">
+    <h3>みつけた組み合わせ <span class="counter-badge" id="counter">0 通り</span></h3>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
+    <table class="combo-table">
+      <thead><tr id="tableHeader"></tr></thead>
+      <tbody id="comboTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+var FLAVORS = [
+  { name: 'バニラ',  color: '#FFF8DC', stroke: '#C8A000', textColor: '#7a6000', emoji: '🍦' },
+  { name: 'いちご',  color: '#FFB3BA', stroke: '#D44060', textColor: '#8b0026', emoji: '🍓' },
+  { name: 'チョコ',  color: '#C4986A', stroke: '#5C3A1E', textColor: '#fff',    emoji: '🍫' },
+  { name: 'ミント',  color: '#AAEEDD', stroke: '#2A9D7F', textColor: '#145040', emoji: '🌿' },
+  { name: 'レモン',  color: '#FFF176', stroke: '#C8A000', textColor: '#7a6000', emoji: '🍋' },
+];
+
+var mode = 3;
+var selected = [];
+var currentSlot = 0;
+var discovered = [];
+var completeBannerShown = false;
+
+function totalPerms() { return mode === 2 ? 20 : 60; }
+
+function setMode(m) {
+  mode = m;
+  discovered = [];
+  completeBannerShown = false;
+  document.querySelectorAll('.mode-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('mode' + m + 'btn').classList.add('active');
+  var existing = document.getElementById('completeBanner');
+  if (existing) existing.remove();
+  buildTableHeader();
+  renderTable();
+  updateCounter();
+  updateProgressBar();
+  buildCone();
+  resetSelection();
+}
+
+function buildCone() {
+  var svg = document.getElementById('coneSvg');
+  svg.innerHTML = '';
+  var coneTop = mode === 2 ? 140 : 115;
+  var gap = 32;
+
+  var poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  poly.setAttribute('points','80,218 32,'+coneTop+' 128,'+coneTop);
+  poly.setAttribute('fill','#F0C060');
+  poly.setAttribute('stroke','#C89030');
+  poly.setAttribute('stroke-width','1.5');
+  svg.appendChild(poly);
+  [[55,coneTop+14],[80,coneTop+4],[105,coneTop+14]].forEach(function(p){
+    var l = document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',p[0]); l.setAttribute('y1',p[1]); l.setAttribute('x2','80'); l.setAttribute('y2','218');
+    l.setAttribute('stroke','#C89030'); l.setAttribute('stroke-width','0.8');
+    svg.appendChild(l);
+  });
+
+  var slotLabels = mode === 2 ? ['①下','②上'] : ['①下','②中','③上'];
+  for (var i = 0; i < mode; i++) {
+    var cy = coneTop - 16 - i * gap;
+    var el = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    el.setAttribute('id','ball'+i);
+    el.setAttribute('cx','80'); el.setAttribute('cy', cy);
+    el.setAttribute('rx','38'); el.setAttribute('ry','20');
+    el.setAttribute('fill','#E8E8E8'); el.setAttribute('stroke','#ccc'); el.setAttribute('stroke-width','1.5');
+    svg.appendChild(el);
+    var tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('id','label'+i);
+    tx.setAttribute('x','80'); tx.setAttribute('y', cy+5);
+    tx.setAttribute('text-anchor','middle');
+    tx.setAttribute('font-size','12');
+    tx.setAttribute('font-weight','bold');
+    tx.setAttribute('fill','#aaa');
+    tx.textContent = slotLabels[i];
+    svg.appendChild(tx);
+  }
+}
+
+function buildFlavorButtons() {
+  var container = document.getElementById('flavor-buttons');
+  container.innerHTML = '';
+  FLAVORS.forEach(function(f, i) {
+    var btn = document.createElement('button');
+    btn.className = 'flavor-btn';
+    btn.id = 'fbtn-' + i;
+    btn.textContent = f.emoji + ' ' + f.name;
+    btn.style.backgroundColor = f.color;
+    btn.style.borderColor = f.stroke;
+    btn.style.color = f.textColor;
+    btn.onclick = (function(idx){ return function(){ selectFlavor(idx); }; })(i);
+    container.appendChild(btn);
+  });
+}
+
+function buildTableHeader() {
+  var tr = document.getElementById('tableHeader');
+  var labels = mode === 2 ? ['①下','②上'] : ['①下','②中','③上'];
+  tr.innerHTML = '<th>番号</th>' + labels.map(function(l){ return '<th>'+l+'</th>'; }).join('');
+}
+
+function renderTable() {
+  var tbody = document.getElementById('comboTableBody');
+  tbody.innerHTML = '';
+  var rev = discovered.slice().reverse();
+  rev.forEach(function(d, ri) {
+    var num = discovered.length - ri;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>'+num+'</td>' + d.map(function(i){ return '<td>'+FLAVORS[i].emoji+' '+FLAVORS[i].name+'</td>'; }).join('');
+    tbody.appendChild(tr);
+  });
+}
+
+function updateConeVisual() {
+  var slotLabels = mode === 2 ? ['①下','②上'] : ['①下','②中','③上'];
+  for (var i = 0; i < mode; i++) {
+    var ball = document.getElementById('ball'+i);
+    var lbl = document.getElementById('label'+i);
+    if (!ball || !lbl) continue;
+    if (selected[i] !== undefined) {
+      var f = FLAVORS[selected[i]];
+      ball.setAttribute('fill', f.color);
+      ball.setAttribute('stroke', f.stroke);
+      lbl.textContent = f.name;
+      lbl.setAttribute('fill', f.textColor);
+    } else {
+      ball.setAttribute('fill','#E8E8E8');
+      ball.setAttribute('stroke','#ccc');
+      lbl.textContent = slotLabels[i];
+      lbl.setAttribute('fill','#aaa');
+    }
+  }
+}
+
+function updateFlavorButtons() {
+  FLAVORS.forEach(function(f, i) {
+    var btn = document.getElementById('fbtn-' + i);
+    if (!btn) return;
+    var picked = selected.indexOf(i) !== -1;
+    btn.disabled = picked || currentSlot >= mode;
+  });
+}
+
+function selectFlavor(idx) {
+  if (currentSlot >= mode) return;
+  selected[currentSlot] = idx;
+  currentSlot++;
+  updateConeVisual();
+  updateFlavorButtons();
+  var names = mode === 2 ? ['①下','②上'] : ['①下','②中','③上'];
+  var chosen = selected.slice(0, currentSlot).map(function(v,i){ return '<strong>'+names[i]+'：'+FLAVORS[v].name+'</strong>'; }).join('、');
+  var next = currentSlot < mode ? '次は <strong>'+names[currentSlot]+'</strong> を選んでね！' : '全部選べたね！「決める」ボタンを押してね！';
+  document.getElementById('speech').innerHTML = '選んだのは ' + chosen + ' だよ。<br>' + next;
+  if (currentSlot === mode) document.getElementById('confirmBtn').disabled = false;
+}
+
+function resetSelection() {
+  selected = [];
+  currentSlot = 0;
+  document.getElementById('confirmBtn').disabled = true;
+  updateConeVisual();
+  updateFlavorButtons();
+  var msg = mode === 2
+    ? 'フレーバーを下から順番に2つ選んでね！<br><strong>①いちばん下</strong>、<strong>②いちばん上</strong>の順に選ぼう。'
+    : 'フレーバーを下から順番に3つ選んでね！<br><strong>①いちばん下</strong>、<strong>②まんなか</strong>、<strong>③いちばん上</strong>の順に選ぼう。';
+  document.getElementById('speech').innerHTML = msg;
+}
+
+function comboKey(arr) { return arr.join('-'); }
+function updateCounter() { document.getElementById('counter').textContent = discovered.length + ' 通り'; }
+function updateProgressBar() {
+  document.getElementById('progressBar').style.width = (discovered.length / totalPerms() * 100) + '%';
+}
+
+function confirmSelection() {
+  var key = comboKey(selected);
+  var alreadyFound = discovered.some(function(d){ return comboKey(d) === key; });
+  if (alreadyFound) {
+    var names = selected.map(function(i){ return FLAVORS[i].emoji+FLAVORS[i].name; }).join('、');
+    document.getElementById('speech').innerHTML = '<strong>この組み合わせはもうみつけたよ！</strong><br>'+names+' はもう表に入ってるよ。<br>ちがう組み合わせを試してみよう！';
+    return;
+  }
+  discovered.push(selected.slice());
+  var num = discovered.length;
+  var tbody = document.getElementById('comboTableBody');
+  var tr = document.createElement('tr');
+  tr.className = 'new-row';
+  tr.innerHTML = '<td>'+num+'</td>' + selected.map(function(i){ return '<td>'+FLAVORS[i].emoji+' '+FLAVORS[i].name+'</td>'; }).join('');
+  tbody.prepend(tr);
+  setTimeout(function(){ tr.classList.remove('new-row'); }, 2000);
+  updateCounter();
+  updateProgressBar();
+
+  var bot = FLAVORS[selected[0]].name;
+  var top = FLAVORS[selected[mode-1]].name;
+  var desc = mode === 2
+    ? '下から「<strong>'+bot+'</strong>・<strong>'+top+'</strong>」だね！'
+    : '下から「<strong>'+bot+'</strong>・<strong>'+FLAVORS[selected[1]].name+'</strong>・<strong>'+top+'</strong>」だね！';
+  var diff = totalPerms() - num;
+  var comment = num === 1 ? 'はじめての組み合わせだね！すごい！'
+    : diff > 0 ? 'あと <strong>'+diff+' こ</strong> の組み合わせが残ってるよ。がんばれ！'
+    : '';
+  document.getElementById('speech').innerHTML = desc+'<br>これで <strong>'+num+'番目</strong> の組み合わせをみつけたよ！<br>'+comment;
+
+  if (discovered.length === totalPerms() && !completeBannerShown) {
+    completeBannerShown = true;
+    var existing = document.getElementById('completeBanner');
+    if (existing) existing.remove();
+    var banner = document.createElement('div');
+    banner.id = 'completeBanner';
+    banner.className = 'complete-banner';
+    banner.innerHTML = '<div class="big">🎉</div><p>ぜんぶみつけたよ！すごい！！</p><small>全部で <strong>'+totalPerms()+' 通り</strong> あったね！</small>';
+    document.getElementById('app').insertBefore(banner, document.getElementById('app').children[2]);
+    document.getElementById('speech').innerHTML = 'おめでとう！'+(mode===2?'2だん':'3だん')+'のアイスの組み合わせは、ぜんぶで <strong>'+totalPerms()+' 通り</strong> あったね！よくがんばりました！';
+    resetSelection();
+    return;
+  }
+  resetSelection();
+}
+
+buildFlavorButtons();
+setMode(3);
+</script>
+</body>
+</html>
